@@ -70,7 +70,6 @@ class CodeBreaker:
         length = int(self.__difficulty) + 2
         number = str(random.randint(0, 10**length - 1))
         self.__secret_code = number.zfill(length - len(number))
-        input(", ".join([str(self.__difficulty), str(length), number, self.__secret_code]))
 
     def __make_guess(self) -> None:
         if self.__last_guess_invalid:
