@@ -4,9 +4,6 @@ import enum
 import random
 
 
-MAX_GUESSES = 10
-
-
 BLACK = "\033[30m"
 RED = "\033[31m"
 GREEN = "\033[32m"
@@ -26,6 +23,7 @@ def clear() -> None:
 class CodeBreaker:
     def __init__(self) -> None:
         self.__difficulty: int = None
+        self.__max_guesses: int = None
         self.__secret_code: str = None
         self.__history: list = []
 
@@ -73,9 +71,8 @@ class CodeBreaker:
 
     def __make_guess(self) -> None:
         if self.__last_guess_invalid:
-            print(RED + "You entered an invalid or duplicate guess!" + RESET + "Please try again:")
-        else:
-            print("Please make a guess:")
+            print(RED + "You entered an invalid or duplicate guess!" + RESET)
+        print("Please make a guess:")
         guess = input("> ")
 
         try:
@@ -100,7 +97,14 @@ class CodeBreaker:
             pass
 
     def __draw_board(self) -> None:
-        print("A secret code has been set! Can you break it?", "\n")
+        print(
+            "A secret code of length "
+            + CYAN
+            + str(len(self.__secret_code))
+            + RESET
+            + " has been set! Can you break it?",
+            "\n",
+        )
 
         if len(self.__history) > 0:
             print("Previous guesses:")
@@ -110,7 +114,7 @@ class CodeBreaker:
 
             print("")
 
-        print("Remaining guesses:", MAX_GUESSES - len(self.__history), "\n")
+        print("Remaining guesses:", self.__max_guesses - len(self.__history), "\n")
 
     # Set game difficulty. Determines the length of the code to break
     def __set_difficulty(self) -> None:
@@ -134,6 +138,11 @@ class CodeBreaker:
                 self.__difficulty = int(choice)
                 if self.__difficulty < 1 or self.__difficulty > 3:
                     raise ValueError("Code length must be between 3 and 5")
+
+                if self.__difficulty == 3:
+                    self.__max_guesses = 12
+                else:
+                    self.__max_guesses = 10
             except ValueError:
                 invalid_choice = True
             else:
@@ -142,7 +151,7 @@ class CodeBreaker:
                 pass
 
     def run(self) -> None:
-        while len(self.__history) < MAX_GUESSES and not self.__player_has_won:
+        while len(self.__history) < self.__max_guesses and not self.__player_has_won:
             clear()
             self.__draw_board()
             self.__make_guess()
