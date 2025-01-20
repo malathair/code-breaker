@@ -41,5 +41,8 @@ previous guesses. Invalid guesses will not consume a guess and the player will b
 Use the clues from each guess to your advantage to break the code before you run out of chances.
 
 ## Screenshots
+![difficulty menu](screenshots/difficulty_menu.png)
 
-![alt text](image.png)
+![game start](screenshots/game-start.png)
+
+![game end](screenshots/game-end.png)

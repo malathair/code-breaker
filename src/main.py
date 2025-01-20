@@ -79,6 +79,8 @@ class CodeBreaker:
                     self.__board_previous_guess.format(guess.center(24), clue.ljust(len(clue) + 5 - clue_length)),
                     end="",
                 )
+        else:
+            print(self.__board_previous_guess.format("".center(24), "".ljust(5)), end="")
 
         print(self.__board_footer.format(str(self.__difficulty["max_guesses"] - len(self.__history)).ljust(19)))
 
