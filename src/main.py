@@ -1,19 +1,8 @@
 #!/usr/bin/env python3
 
-import enum
+import json
+import os
 import random
-
-
-BLACK = "\033[30m"
-RED = "\033[31m"
-GREEN = "\033[32m"
-YELLOW = "\033[33m"
-BLUE = "\033[34m"
-MAGENTA = "\033[35m"
-CYAN = "\033[36m"
-WHITE = "\033[37m"
-DEFAULT = "\033[38m"
-RESET = "\033[39m"
 
 
 def clear() -> None:
@@ -22,22 +11,27 @@ def clear() -> None:
 
 class CodeBreaker:
     def __init__(self) -> None:
-        self.__difficulty: int = None
-        self.__max_guesses: int = None
+        self.__difficulty: dict = None
         self.__secret_code: str = None
         self.__history: list = []
 
-        self.__last_guess_invalid = False
-        self.__player_has_won = False
-        self.play_again = False
+        self.__last_guess_invalid: bool = False
+        self.__player_has_won: bool = False
+        self.play_again: bool = False
+
+        self.__board_header: str = None
+        self.__board_footer: str = None
+        self.__board_previous_guess: str = None
 
         self.__set_difficulty()
         self.__gen_code()
+        self.__set_board_header()
+        self.__set_board_previous_guess_format()
+        self.__set_board_footer_format()
 
     def __check_guess(self, guess: str) -> None:
         if guess == self.__secret_code:
             self.__player_has_won = True
-            return GREEN + "ccc" + RESET
 
         clues = {}
         for index, num in enumerate(guess):
@@ -48,32 +42,68 @@ class CodeBreaker:
                 clues[num] = ""
 
             if num == self.__secret_code[index]:
-                clues[num] = GREEN + "c"
+                clues[num] = "\033[32mc"
             else:
                 if not clues[num]:
-                    clues[num] = YELLOW + "w"
+                    clues[num] = "\033[33mw"
 
-        return "".join(sorted([clue for _, clue in clues.items() if clue])) + RESET
+        return "".join(sorted([clue for _, clue in clues.items() if clue])) + "\033[39m"
 
     def __display_game_end(self) -> None:
-        if self.__player_has_won:
-            print("\n", "Game Won!", "\n")
-        else:
-            print("Game Lost! The secret code was:", self.__secret_code, "\n")
+        clear()
+        self.__draw_board(True)
 
-        self.play_again = True if input("Would you like to play again? [y/N]: ").lower() == "y" else False
+        if self.__player_has_won:
+            message = "Game Won!"
+        else:
+            message = "Game Lost!"
+
+        print(f"  {message}", "\n")
+
+        self.play_again = True if input("  Would you like to play again? [y/N]: ").lower() == "y" else False
+
+    def __draw_board(self, display_code: bool = False) -> None:
+        if display_code:
+            code = self.__secret_code
+        else:
+            code = "*" * len(self.__secret_code)
+        print(
+            self.__board_header.format(self.__difficulty["name"].ljust(30), code.ljust(20)),
+            end="",
+        )
+
+        if len(self.__history) > 0:
+            for guess, clue in self.__history:
+                clue_length = int((len(clue) - 5) / 6)
+                print(
+                    self.__board_previous_guess.format(guess.center(24), clue.ljust(len(clue) + 5 - clue_length)),
+                    end="",
+                )
+
+        print(self.__board_footer.format(str(self.__difficulty["max_guesses"] - len(self.__history)).ljust(19)))
 
     # Generate a random code. The length of which is determined by the game difficulty
     def __gen_code(self) -> None:
-        length = int(self.__difficulty) + 2
-        number = str(random.randint(0, 10**length - 1))
-        self.__secret_code = number.zfill(length - len(number))
+        number = str(random.randint(0, 10 ** self.__difficulty["code_len"] - 1))
+        self.__secret_code = number.zfill(self.__difficulty["code_len"])
+        if len(self.__secret_code) != self.__difficulty["code_len"]:
+            raise ValueError("Generated secret code is not the correct length!")
+
+    def __load_difficulty_settings(self) -> dict:
+        filename = "levels.json"
+        filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+        with open(filepath) as file:
+            difficulty_settings = json.load(file)
+
+        for level in difficulty_settings:
+            difficulty_settings[level]["name"] = difficulty_settings[level]["name"].replace(r"\u001b", "\033")
+
+        return difficulty_settings
 
     def __make_guess(self) -> None:
         if self.__last_guess_invalid:
-            print(RED + "You entered an invalid or duplicate guess!" + RESET)
-        print("Please make a guess:")
-        guess = input("> ")
+            print("  \033[31mYou entered an invalid or duplicate guess!\033[39m", "\n")
+        guess = input("  Please make a guess> ")
 
         try:
             int(guess)
@@ -96,62 +126,60 @@ class CodeBreaker:
         finally:
             pass
 
-    def __draw_board(self) -> None:
-        print(
-            "A secret code of length "
-            + CYAN
-            + str(len(self.__secret_code))
-            + RESET
-            + " has been set! Can you break it?",
-            "\n",
-        )
+    def __set_board_footer_format(self) -> None:
+        filename = "assets/board_footer.txt"
+        filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+        with open(filepath) as file:
+            self.__board_footer = file.read()
 
-        if len(self.__history) > 0:
-            print("Previous guesses:")
+    def __set_board_header(self) -> None:
+        filename = "assets/board_header.txt"
+        filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+        with open(filepath) as file:
+            self.__board_header = file.read()
 
-            for guess, clue in self.__history:
-                print(f"  {guess} - {clue}")
-
-            print("")
-
-        print("Remaining guesses:", self.__max_guesses - len(self.__history), "\n")
+    def __set_board_previous_guess_format(self) -> None:
+        filename = "assets/previous_guess.txt"
+        filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+        with open(filepath) as file:
+            self.__board_previous_guess = file.read()
 
     # Set game difficulty. Determines the length of the code to break
     def __set_difficulty(self) -> None:
-        difficulty_set = False
+        difficulty_settings = self.__load_difficulty_settings()
+        difficulty_is_set = False
         invalid_choice = False
 
-        while not difficulty_set:
+        filename = "assets/difficulty_menu.txt"
+        filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+        with open(filepath) as file:
+            difficulty_menu = file.read()
+            difficulty_menu.replace("\\033", "\033")
+
+        while not difficulty_is_set:
             clear()
-            print("Please select a difficulty:", "\n")
-            print("  1. " + GREEN + "Easy" + RESET + "   (3 digit code)")
-            print("  2. " + YELLOW + "Medium" + RESET + " (4 digit code)")
-            print("  3. " + RED + "Hard" + RESET + "   (5 digit code)", "\n")
+            print(difficulty_menu)
 
             if invalid_choice:
-                print(RED + "Invalid selection! Please select a valid difficulty:" + RESET)
+                print("  \033[31mInvalid selection! Please select a valid difficulty\033[39m", "\n")
                 invalid_choice = False
 
-            choice = input("> ")
+            choice = input("  > ")
 
             try:
-                self.__difficulty = int(choice)
-                if self.__difficulty < 1 or self.__difficulty > 3:
-                    raise ValueError("Code length must be between 3 and 5")
-
-                if self.__difficulty == 3:
-                    self.__max_guesses = 12
-                else:
-                    self.__max_guesses = 10
+                int(choice)
+                if int(choice) < 1 or int(choice) > 3:
+                    raise ValueError("Difficulty level must be between 1 and 3")
+                self.__difficulty = difficulty_settings[choice]
             except ValueError:
                 invalid_choice = True
             else:
-                difficulty_set = True
+                difficulty_is_set = True
             finally:
                 pass
 
     def run(self) -> None:
-        while len(self.__history) < self.__max_guesses and not self.__player_has_won:
+        while len(self.__history) < self.__difficulty["max_guesses"] and not self.__player_has_won:
             clear()
             self.__draw_board()
             self.__make_guess()

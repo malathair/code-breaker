@@ -1,0 +1,17 @@
+{
+    "1": {
+        "name": "\\u001b[32mEasy\\u001b[39m",
+        "max_guesses": 10,
+        "code_len": 3
+    },
+    "2": {
+        "name": "\\u001b[33mMedium\\u001b[39m",
+        "max_guesses": 10,
+        "code_len": 4
+    },
+    "3": {
+        "name": "\\u001b[31mHard\\u001b[39m",
+        "max_guesses": 12,
+        "code_len": 5
+    }
+}
